@@ -648,6 +648,7 @@ export abstract class AbstractCursor<
 
   /** @internal */
   async getMore(batchSize: number): Promise<CursorResponse> {
+    console.log('INSIDE getMore');
     if (this.cursorId == null) {
       throw new MongoRuntimeError(
         'Unexpected null cursor id. A cursor creating command should have set this'
@@ -681,7 +682,9 @@ export abstract class AbstractCursor<
    */
   private async cursorInit(): Promise<void> {
     try {
+      console.log('INITIALIZING CURSOR');
       const state = await this._initialize(this.cursorSession);
+      console.log('CALLED _initialize.\nRESPONSE:', state.response.toObject());
       const response = state.response;
       this.selectedServer = state.server;
       this.cursorId = response.id;
@@ -704,7 +707,9 @@ export abstract class AbstractCursor<
 
   /** @internal Attempt to obtain more documents */
   private async fetchBatch(): Promise<void> {
+    console.log('IN fetchBatch');
     if (this.isClosed) {
+      console.log('RETURNING FROM fetchBatch BECAUSE CURSOR IS CLOSED');
       return;
     }
 
@@ -712,16 +717,34 @@ export abstract class AbstractCursor<
       // if the cursor is dead, we clean it up
       // cleanupCursor should never throw, but if it does it indicates a bug in the driver
       // and we should surface the error
+      console.log('CLEANING UP AND RETURNING FROM fetchBatch BECAUSE CURSOR IS DEAD');
       await this.cleanup();
       return;
     }
 
     if (this.cursorId == null) {
       await this.cursorInit();
+      console.log('AFTER cursorInit CALL');
+      console.table({
+        isDead: this.isDead,
+        isClosed: this.isClosed,
+        isKilled: this.isKilled,
+        // @ts-expect-error
+        cursorId: this.cursorId?.toString()
+      });
       // If the cursor died or returned documents, return
-      if ((this.documents?.length ?? 0) !== 0 || this.isDead) return;
+      if ((this.documents?.length ?? 0) !== 0) {
+        console.log('RETURNING FROM fetchBatch BECAUSE THERE ARE DOCUMENTS AVAILABLE');
+        return;
+      }
+
+      if (this.isDead) {
+        console.log('RETURNING FROM fetchBatch BECAUSE CURSOR IS DEAD');
+        return;
+      }
       // Otherwise, run a getMore
     }
+    console.log('GOING TO CALL getMore');
 
     // otherwise need to call getMore
     const batchSize = this.cursorOptions.batchSize || 1000;
