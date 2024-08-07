@@ -128,7 +128,7 @@ export abstract class AbstractCursor<
   CursorEvents extends AbstractCursorEvents = AbstractCursorEvents
 > extends TypedEventEmitter<CursorEvents> {
   /** @internal */
-  private cursorId: Long | null;
+  private _cursorId: Long | null;
   /** @internal */
   private cursorSession: ClientSession;
   /** @internal */
@@ -166,7 +166,7 @@ export abstract class AbstractCursor<
     }
     this.cursorClient = client;
     this.cursorNamespace = namespace;
-    this.cursorId = null;
+    this._cursorId = null;
     this.initialized = false;
     this.isClosed = false;
     this.isKilled = false;
@@ -273,6 +273,16 @@ export abstract class AbstractCursor<
 
   get loadBalanced(): boolean {
     return !!this.cursorClient.topology?.loadBalanced;
+  }
+
+  set cursorId(v: any) {
+    if (v == null) throw new Error('Tried to set cursorId to null');
+    console.log(`SETTING cursorId to ${v.toString()}`);
+    this._cursorId = v;
+  }
+
+  get cursorId(): Long | null {
+    return this._cursorId;
   }
 
   /** Returns current buffered documents length */
